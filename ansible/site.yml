@@ -1,0 +1,19 @@
+---
+- name: Configure lab nodes
+  hosts: nodes
+  gather_facts: true
+  become: true
+  pre_tasks:
+    - name: Wait until SSH accepts connections
+      ansible.builtin.wait_for_connection:
+        delay: 2
+        timeout: 180
+      tags: [always]
+
+  roles:
+    - role: common
+      tags: [configure, common]
+    - role: nginx
+      tags: [configure, nginx]
+    - role: app
+      tags: [configure, app]

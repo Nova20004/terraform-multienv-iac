@@ -1,0 +1,7 @@
+---
+# When both this flag and ansible_virtualization_type == docker are true,
+# sysctl, ufw and chrony are skipped. They need a real kernel.
+common_skip_kernel_tasks_when_docker: true
+common_manage_sysctl: true
+common_manage_ufw: true
+common_manage_chrony: true

@@ -1,0 +1,47 @@
+---
+- name: Apply pending handler changes before smoke tests
+  ansible.builtin.meta: flush_handlers
+
+- name: Request the local health endpoint
+  ansible.builtin.uri:
+    url: "http://127.0.0.1/health"
+    return_content: true
+    status_code: [200]
+  register: app_health
+  retries: 12
+  delay: 5
+  until: app_health.status | default(0) == 200
+
+- name: Check that Postgres accepts connections over the backend network
+  ansible.builtin.command:
+    argv:
+      - pg_isready
+      - -h
+      - "{{ db_host }}"
+      - -p
+      - "{{ db_port | string }}"
+      - -U
+      - "{{ db_user }}"
+      - -d
+      - "{{ db_name }}"
+  register: app_pg_ready
+  changed_when: false
+  retries: 12
+  delay: 5
+  until: app_pg_ready.rc == 0
+
+- name: Report the smoke-test result
+  ansible.builtin.assert:
+    that:
+      - app_health.status | default(0) == 200
+      - app_pg_ready.rc == 0
+    fail_msg: >-
+      Smoke test failed on {{ inventory_hostname }}:
+      GET /health status={{ app_health.status | default('unreachable') }}
+      body={{ app_health.content | default('') }};
+      pg_isready {{ db_host }}:{{ db_port }}
+      rc={{ app_pg_ready.rc | default('unset') }}
+      {{ app_pg_ready.stdout | default(app_pg_ready.stderr | default('no response')) }}.
+    success_msg: >-
+      Smoke test passed on {{ inventory_hostname }}:
+      /health returned 200 and Postgres at {{ db_host }}:{{ db_port }} is accepting connections.

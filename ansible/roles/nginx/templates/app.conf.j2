@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+server {
+  listen {{ nginx_listen_port }} default_server;
+  listen [::]:{{ nginx_listen_port }} default_server;
+  server_name _;
+
+  location = /health {
+    proxy_pass http://{{ nginx_upstream_host }}:{{ nginx_upstream_port }}/health;
+    access_log off;
+  }
+
+  location / {
+    proxy_pass http://{{ nginx_upstream_host }}:{{ nginx_upstream_port }};
+  }
+}

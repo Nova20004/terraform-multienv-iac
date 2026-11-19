@@ -1,0 +1,162 @@
+name: IaC CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iac-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmt:
+    name: terraform fmt
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+  validate:
+    name: terraform validate
+    runs-on: ubuntu-24.04
+    needs: fmt
+    strategy:
+      fail-fast: false
+      matrix:
+        directory:
+          - bootstrap
+          - modules/network
+          - modules/compute
+          - modules/database
+          - environments/dev
+          - environments/staging
+          - environments/prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+
+      - name: Init without a backend
+        run: terraform -chdir="${{ matrix.directory }}" init -backend=false -input=false
+
+      - name: Validate
+        run: terraform -chdir="${{ matrix.directory }}" validate
+
+  tflint:
+    name: tflint
+    runs-on: ubuntu-24.04
+    needs: fmt
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+        with:
+          tflint_version: v0.65.0
+
+      - name: Lint
+        run: tflint --recursive
+
+  trivy:
+    name: trivy config
+    runs-on: ubuntu-24.04
+    needs: fmt
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Scan Terraform and Dockerfiles
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          scanners: misconfig
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          version: v0.76.2
+          cache: "false"
+          trivyignores: .trivyignore
+
+  ansible:
+    name: ansible
+    runs-on: ubuntu-24.04
+    needs: fmt
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        run: python -m pip install -r ansible/requirements.txt
+
+      - name: ansible-lint
+        working-directory: ansible
+        run: ansible-lint
+
+      - name: Syntax check
+        working-directory: ansible
+        run: ansible-playbook --syntax-check -i inventories/syntax/hosts.ini site.yml
+
+  # Real Docker flow. Not part of pull requests. verify-lock.sh stays out of CI
+  # on purpose: it is a local concurrency check, not a runner job.
+  e2e-dev:
+    name: e2e dev
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+
+      - name: Setup Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        run: python -m pip install -r ansible/requirements.txt
+
+      - name: Write .env and the lab SSH key
+        run: |
+          make env
+          make ssh-key
+
+      - name: Bootstrap, apply dev, configure and smoke
+        run: make demo
+
+      - name: Destroy the dev environment
+        if: always()
+        run: make destroy ENV=dev
+
+      - name: Destroy the state database
+        if: always()
+        run: make bootstrap-destroy CONFIRM=yes

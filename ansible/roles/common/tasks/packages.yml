@@ -1,0 +1,32 @@
+---
+# The node image deletes apt lists after install. A fresh pkgcache.bin then
+# makes cache_valid_time skip the update, and apt reports the packages missing.
+- name: Look for apt package lists
+  ansible.builtin.find:
+    paths: /var/lib/apt/lists
+    patterns:
+      - "*Packages*"
+    file_type: file
+  register: common_apt_lists
+
+- name: Install baseline packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - sudo
+      - unattended-upgrades
+      - fail2ban
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ (0 if common_apt_lists.matched == 0 else 3600) | int }}"
+
+- name: Enable unattended upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";

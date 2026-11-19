@@ -1,0 +1,75 @@
+---
+- name: Set host sysctl defaults
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/99-lab.conf
+    reload: true
+    state: present
+  loop:
+    - name: net.ipv4.conf.all.rp_filter
+      value: "1"
+    - name: net.ipv4.icmp_echo_ignore_broadcasts
+      value: "1"
+    - name: net.ipv4.conf.all.accept_redirects
+      value: "0"
+    - name: net.ipv4.conf.all.send_redirects
+      value: "0"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - common_manage_sysctl | bool
+    - not (common_skip_for_docker | bool)
+
+- name: Install ufw
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - common_manage_ufw | bool
+    - not (common_skip_for_docker | bool)
+
+- name: Allow OpenSSH through ufw
+  ansible.builtin.command:
+    argv:
+      - ufw
+      - allow
+      - OpenSSH
+  register: common_ufw_ssh
+  changed_when: "'existing' not in (common_ufw_ssh.stdout | lower)"
+  when:
+    - common_manage_ufw | bool
+    - not (common_skip_for_docker | bool)
+
+- name: Enable ufw
+  ansible.builtin.command:
+    argv:
+      - ufw
+      - --force
+      - enable
+  register: common_ufw_enable
+  changed_when: "'already active' not in (common_ufw_enable.stdout | lower)"
+  when:
+    - common_manage_ufw | bool
+    - not (common_skip_for_docker | bool)
+
+- name: Install chrony
+  ansible.builtin.apt:
+    name: chrony
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - common_manage_chrony | bool
+    - not (common_skip_for_docker | bool)
+
+- name: Enable chrony
+  ansible.builtin.service:
+    name: chrony
+    state: started
+    enabled: true
+  when:
+    - common_manage_chrony | bool
+    - not (common_skip_for_docker | bool)

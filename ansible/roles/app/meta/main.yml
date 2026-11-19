@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: terraform-multienv-iac
+  description: Tiny systemd service behind nginx, plus database reachability checks.
+  license: MIT
+  min_ansible_version: "2.21"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+dependencies: []

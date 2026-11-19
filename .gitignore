@@ -1,0 +1,51 @@
+# Terraform local state and working directories.
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.tfstate.lock.info
+
+# Root module inputs. Examples stay tracked.
+*.tfvars
+*.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+!*.tfvars.example
+
+# Partial backend config (schema name only; the connection string is in .env).
+backend.hcl
+
+# Plans produced by `terraform plan -out=tfplan`.
+tfplan
+tfplan.*
+
+# Local secrets and the dedicated lab SSH key.
+.env
+.env.*
+!.env.example
+.ssh/
+
+# Ansible inventory rendered by Terraform, and local Ansible cruft.
+ansible/inventories/dev/hosts.ini
+ansible/inventories/staging/hosts.ini
+ansible/inventories/prod/hosts.ini
+*.retry
+.ansible/
+
+# Database dumps from scripts/backup-db.sh.
+backups/
+
+# Local toolchains, virtualenvs and editor noise. Lock files stay tracked:
+# .terraform.lock.hcl is intentionally NOT ignored.
+.tools/
+.venv/
+.trivy-cache/
+.cache/
+__pycache__/
+*.pyc
+.DS_Store

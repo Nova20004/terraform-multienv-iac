@@ -1,0 +1,31 @@
+# Copy to terraform.tfvars (gitignored) only when you need to override a default.
+# `make demo` works with the defaults below plus .env and `make ssh-key`.
+# State database credentials are NOT set here. They live in .env.
+
+project     = "lab"
+owner       = "local"
+environment = "prod"
+
+# docker_host = "unix:///var/run/docker.sock"
+
+frontend_cidr = "10.30.0.0/24"
+backend_cidr  = "10.30.1.0/24"
+
+node_count        = 3
+node_memory_mb    = 1024
+node_cpu_shares   = 1024
+ssh_port_base     = 2401
+ssh_user          = "ansible"
+restart_policy    = "unless-stopped"
+enable_lb         = true
+lb_port           = 8081
+db_memory_mb      = 1024
+backup_retention_days = 30
+
+node_base_image = "ubuntu:24.04@sha256:73b999393d07f2bf65a40373778a44dc9a6d54ad7718d29247d8ff9413c4d6a8"
+postgres_image  = "postgres:17.12@sha256:b60e90042aa6b8dbecd58e224b3e36114dbf8ad754465264c2476ad58a86e45c"
+nginx_image     = "nginx:1.30.7@sha256:7fad6c0dff97965adbddf28027d934b111fc0221a554315dc274712f3fba24d3"
+
+# systemd_privileged = false
+# extra_capabilities = []
+# security_opts      = []

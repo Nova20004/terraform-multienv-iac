@@ -1,0 +1,8 @@
+# Copy to backend.hcl (gitignored). `make init` does that when the file is missing.
+# Do not put conn_str here. `make` builds PG_CONN_STR from .env and selects
+# the database terraform_state_dev, terraform_state_staging or terraform_state_prod.
+#
+# sslmode=disable is acceptable only for the bootstrap Postgres bound to
+# 127.0.0.1. A remote Postgres server must use sslmode=require or verify-full.
+#
+# This file intentionally sets no keys. Isolation is the database name, not a schema.

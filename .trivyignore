@@ -1,0 +1,5 @@
+# DS-0002: the lab node image must run as root because systemd is PID 1.
+# This repository has one Dockerfile (docker/node/Dockerfile). It is a VM
+# stand-in, not an application image. SSH is key-only and Terraform publishes
+# it on 127.0.0.1 only. See modules/compute/README.md.
+DS-0002

@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: terraform-multienv-iac
+  description: Packages, sudo, SSH hardening and fail2ban. Kernel tasks skip Docker.
+  license: MIT
+  min_ansible_version: "2.21"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+dependencies: []

@@ -1,0 +1,19 @@
+---
+- name: Record whether kernel tasks must be skipped
+  ansible.builtin.set_fact:
+    common_skip_for_docker: "{{ (common_skip_kernel_tasks_when_docker | bool) and ((ansible_facts.virtualization_type | default('')) == 'docker') }}"
+
+- name: Configure packages
+  ansible.builtin.import_tasks: packages.yml
+
+- name: Configure the operator account
+  ansible.builtin.import_tasks: users.yml
+
+- name: Harden SSH
+  ansible.builtin.import_tasks: ssh.yml
+
+- name: Configure fail2ban
+  ansible.builtin.import_tasks: fail2ban.yml
+
+- name: Configure host-kernel services
+  ansible.builtin.import_tasks: kernel.yml
